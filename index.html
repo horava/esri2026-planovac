@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Plánovač – Konference GIS Esri v ČR 2026</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f4f5f2; --surface:#ffffff; --surface2:#eceee9; --ink:#1b1f1d; --muted:#5f6763; --line:#d9ddd6; --line2:#e8ebe5;
+  --accent:#0f6b5c; --accent-ink:#ffffff; --accent-soft:#d8ece7;
+  --bad:#c42b2b; --bad-soft:#fde6e3; --bad-ink:#ffffff;
+  --k-talk:#7b8a84; --k-key:#3e4fb0; --k-ws:#c27a00; --k-mini:#2f8f4e; --k-cons:#7a4bb3; --k-poster:#c2417a;
+  --band:#e6e8e2;
+  --safe-t:env(safe-area-inset-top,0px); --safe-b:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#121614; --surface:#1c211f; --surface2:#242a27; --ink:#e7ebe8; --muted:#9aa49f; --line:#323a36; --line2:#262c29;
+    --accent:#2fa38c; --accent-ink:#06120f; --accent-soft:#163a33;
+    --bad:#ef5b4f; --bad-soft:#3a1b19; --bad-ink:#1a0605;
+    --band:#1f2522;
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:"IBM Plex Sans",system-ui,sans-serif;-webkit-text-size-adjust:100%}
+body{display:flex;flex-direction:column;height:100dvh;overflow:hidden}
+button{font:inherit;color:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.mono{font-family:"IBM Plex Mono",ui-monospace,monospace}
+
+/* header */
+header{flex:none;padding:calc(10px + var(--safe-t)) 12px 8px;background:var(--surface);border-bottom:1px solid var(--line)}
+.titlebar{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+h1{font-size:15px;font-weight:700;margin:0;letter-spacing:-.01em}
+.stats{font-size:12px;color:var(--muted);white-space:nowrap}
+.stats b{color:var(--ink);font-weight:600}
+.stats .bad{color:var(--bad);font-weight:600}
+.controls{display:flex;gap:8px;margin-top:8px;align-items:center;flex-wrap:wrap}
+.seg{display:inline-flex;background:var(--surface2);border-radius:9px;padding:3px}
+.seg button{border:0;background:transparent;padding:6px 11px;border-radius:7px;font-size:13px;font-weight:600;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.chips{display:flex;gap:6px;margin-top:8px;overflow-x:auto;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:4px 10px;font-size:12px;color:var(--muted);display:inline-flex;align-items:center;gap:6px}
+.chip .dot{width:8px;height:8px;border-radius:50%}
+.chip[aria-pressed="true"]{color:var(--ink);border-color:var(--ink)}
+.chip[aria-pressed="false"] .dot{opacity:.3}
+
+/* grid */
+main{flex:1;min-height:0;position:relative}
+.scroller{position:absolute;inset:0;overflow:auto;overscroll-behavior:contain;padding-bottom:var(--safe-b)}
+.grid{display:grid;position:relative;min-width:100%}
+.corner,.colhead{position:sticky;top:0;z-index:5;background:var(--surface);border-bottom:1px solid var(--line);height:34px;display:flex;align-items:center}
+.corner{left:0;z-index:7}
+.colhead{justify-content:center;font-size:11.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);border-left:1px solid var(--line2);text-align:center;line-height:1.1;padding:0 4px}
+.times{position:sticky;left:0;z-index:4;background:var(--surface);border-right:1px solid var(--line)}
+.tlabel{position:absolute;right:5px;transform:translateY(-6px);font-size:10.5px;color:var(--muted)}
+.tlabel.half{opacity:.55}
+.col{position:relative;border-left:1px solid var(--line2)}
+.hline{position:absolute;left:0;right:0;height:0;border-top:1px solid var(--line2)}
+.hline.full{border-top-color:var(--line)}
+.band{position:absolute;z-index:1;display:flex;align-items:center;justify-content:center;text-align:center;font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);
+  background:repeating-linear-gradient(135deg,var(--band) 0 6px,transparent 6px 12px);border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:0 8px}
+.band small{display:block;text-transform:none;letter-spacing:0;font-weight:500;font-size:10.5px;margin-top:2px}
+
+.card{position:absolute;left:3px;right:3px;z-index:2;border:1px solid var(--line);background:var(--surface);border-radius:7px;padding:3px 4px 3px 6px;text-align:left;overflow:hidden;
+  border-left:4px solid var(--k);transition:opacity .15s,background .15s;display:block}
+.card .t{font-size:10px;color:var(--muted);display:block;line-height:13px;padding-right:20px}
+.card .n{font-size:11.5px;font-weight:600;line-height:14px;display:-webkit-box;-webkit-box-orient:vertical;overflow:hidden}
+.card .p{font-size:10.5px;color:var(--muted);line-height:13px;display:-webkit-box;-webkit-box-orient:vertical;overflow:hidden;margin-top:1px}
+.card .info{position:absolute;top:-2px;right:-2px;width:28px;height:28px;border:0;background:transparent;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:13px;font-weight:700}
+.card .info span{width:16px;height:16px;border-radius:50%;border:1.5px solid currentColor;display:flex;align-items:center;justify-content:center;font-size:10px;font-family:Georgia,serif;font-style:italic}
+.card.sel{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.card.sel .t,.card.sel .p,.card.sel .info{color:var(--accent-ink);opacity:.85}
+.card.clash{background:var(--bad);border-color:var(--bad);color:var(--bad-ink)}
+.card.clash .t,.card.clash .p,.card.clash .info{color:var(--bad-ink);opacity:.9}
+.card.clash::after{content:"⚠";position:absolute;right:6px;bottom:2px;font-size:12px}
+.card.blocked{opacity:.38}
+.card:focus-visible{outline:2px solid var(--ink);outline-offset:1px}
+.nowline{position:absolute;left:0;right:0;z-index:6;height:0;border-top:2px solid var(--bad);pointer-events:none}
+.nowline::before{content:attr(data-t);position:sticky;left:0;display:inline-block;transform:translateY(-60%);background:var(--bad);color:#fff;font-size:10px;font-weight:600;padding:1px 4px;border-radius:4px;font-family:"IBM Plex Mono",monospace}
+
+/* plan list */
+.plan{padding:12px 12px calc(24px + var(--safe-b));max-width:640px;margin:0 auto}
+.plan h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:18px 0 8px}
+.plan h2:first-child{margin-top:4px}
+.pitem{display:grid;grid-template-columns:78px 1fr;gap:10px;width:100%;text-align:left;border:1px solid var(--line);border-left:4px solid var(--k);background:var(--surface);border-radius:9px;padding:9px 10px;margin-bottom:7px}
+.pitem .tm{font-size:12px;line-height:1.35}
+.pitem .rm{font-size:11px;color:var(--muted);margin-top:2px;font-family:"IBM Plex Sans",sans-serif}
+.pitem .nm{font-size:13.5px;font-weight:600;line-height:1.3}
+.pitem .pp{font-size:12px;color:var(--muted);margin-top:2px;line-height:1.3}
+.pitem .cx{font-size:12px;color:var(--bad);font-weight:600;margin-top:5px}
+.pitem.clash{background:var(--bad-soft);border-color:var(--bad)}
+.gap{font-size:11.5px;color:var(--muted);padding:2px 0 8px 88px}
+.empty{color:var(--muted);font-size:14px;line-height:1.5;padding:30px 8px;text-align:center}
+.planbar{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:8px 12px;font-size:13px;font-weight:600}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.danger{color:var(--bad)}
+
+/* sheet */
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:20;opacity:0;pointer-events:none;transition:opacity .2s}
+.scrim.on{opacity:1;pointer-events:auto}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:21;background:var(--surface);border-radius:16px 16px 0 0;padding:8px 16px calc(16px + var(--safe-b));max-height:82dvh;overflow:auto;
+  transform:translateY(105%);transition:transform .22s ease;max-width:640px;margin:0 auto;box-shadow:0 -6px 24px rgba(0,0,0,.18)}
+.sheet.on{transform:none}
+.grab{width:38px;height:4px;border-radius:2px;background:var(--line);margin:2px auto 12px}
+.sheet .kind{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+.sheet .kind i{width:9px;height:9px;border-radius:50%;background:var(--k)}
+.sheet h3{font-size:18px;line-height:1.3;margin:6px 0 4px}
+.sheet .meta{font-size:13px;color:var(--muted)}
+.sheet .people{font-size:14px;margin-top:10px;line-height:1.45}
+.sheet .desc{font-size:14px;line-height:1.5;margin-top:10px;color:var(--ink)}
+.sheet .warn{margin-top:12px;background:var(--bad-soft);color:var(--bad);border-radius:8px;padding:8px 10px;font-size:13px;font-weight:600;line-height:1.4}
+.sheet .actions{display:flex;gap:8px;margin-top:16px}
+.sheet .actions .btn{flex:1;padding:12px;font-size:15px}
+.toast{position:fixed;left:50%;bottom:calc(20px + var(--safe-b));transform:translateX(-50%) translateY(20px);background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:8px;font-size:13px;opacity:0;transition:.2s;z-index:30;pointer-events:none}
+.toast.on{opacity:1;transform:translateX(-50%)}
+.hint{font-size:11.5px;color:var(--muted);margin-top:6px}
+</style>
+</head>
+<body>
+<header>
+  <div class="titlebar">
+    <h1>Konference GIS Esri 2026</h1>
+    <div class="stats" id="stats"></div>
+  </div>
+  <div class="controls">
+    <div class="seg" role="group" aria-label="Den">
+      <button data-day="st" aria-pressed="true">St 4. 11.</button>
+      <button data-day="ct" aria-pressed="false">Čt 5. 11.</button>
+    </div>
+    <div class="seg" role="group" aria-label="Zobrazení">
+      <button data-view="grid" aria-pressed="true">Mřížka</button>
+      <button data-view="plan" aria-pressed="false">Můj plán</button>
+    </div>
+  </div>
+  <div class="chips" id="chips"></div>
+</header>
+<main>
+  <div class="scroller" id="scroller"></div>
+</main>
+<div class="scrim" id="scrim"></div>
+<div class="sheet" id="sheet" role="dialog" aria-modal="true"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ---------- DATA (program konference, stav ke 22. 10. 2026) ----------
+const ROOMS = {
+  ss:  {name:"Společenský sál", short:"Spol. sál", where:"Společenský sál, 2. patro"},
+  js:  {name:"Jižní sál", short:"Jižní sál", where:"Jižní sál, 2. patro"},
+  t2a: {name:"Terasa 2A", short:"Terasa 2A", where:"Terasa 2A"},
+  foy: {name:"Minisemináře (foyer)", short:"Mini&shy;semináře", where:"Konferenční foyer u výstavy posterů"},
+  kon: {name:"Stánek konzultací", short:"Konzul&shy;tace", where:"Stánek konzultačních služeb ARCDATA ve foyer"}
+};
+const HALLS = ["ss","js","t2a"];
+const KINDS = {
+  key:   {label:"Hlavní program", c:"var(--k-key)"},
+  talk:  {label:"Přednáška", c:"var(--k-talk)"},
+  ws:    {label:"Workshop", c:"var(--k-ws)"},
+  mini:  {label:"Miniseminář (15 min)", c:"var(--k-mini)"},
+  cons:  {label:"Konzultace u stánku", c:"var(--k-cons)"},
+  poster:{label:"Postery", c:"var(--k-poster)"}
+};
+const DAYS = {
+  st:{label:"Středa 4. listopadu", date:"2026-11-04", from:"10:00", to:"20:00"},
+  ct:{label:"Čtvrtek 5. listopadu", date:"2026-11-05", from:"9:30", to:"15:15"}
+};
+const BANDS = [
+  ["st","12:30","14:00","Oběd","Kongresové foyer, 2. patro"],
+  ["st","16:30","17:00","Přestávka",""],
+  ["st","18:40","20:00","Společenský večer","ve foyer do 22.00"],
+  ["ct","10:50","11:20","Přestávka","hlasování o Ceně publika do 11.30"],
+  ["ct","12:40","13:20","Občerstvení","ve foyer"]
+];
+// [day, room, start, end, kind, block, title, people, desc]
+const RAW = [
+ // ===== STŘEDA =====
+ ["st","ss","10:00","10:50","key","Zahájení konference, hlavní řečníci","Zahájení konference","Petr Seidl; ARCDATA PRAHA, s.r.o.","V úvodní části se vyhlašují vítězové jednotlivých kategorií soutěže aplikací."],
+ ["st","ss","10:50","11:25","key","Zahájení konference, hlavní řečníci","Jiří Čtyroký – IPR Praha","Jiří Čtyroký; ředitel Sekce prostorových informací, Institut plánování a rozvoje hl. m. Prahy","Prostorová data a datová infrastruktura jako základ plánování města, analytické a simulační modelování, 3D modely a digitální dvojčata."],
+ ["st","ss","11:25","11:55","key","Zahájení konference, hlavní řečníci","Petr Sýkora – Pražské vodovody a kanalizace","Petr Sýkora; technický ředitel, Pražské vodovody a kanalizace, a.s.","Pořizování a zpracování dat, digitalizace firmy, matematické modelování v reálném čase a předpovědní modely."],
+ ["st","ss","11:55","12:30","key","Zahájení konference, hlavní řečníci","Jan Daňhelka – ČHMÚ","Jan Daňhelka; ředitel pro hydrologii, Český hydrometeorologický ústav","Změny hydrologického cyklu, extrémní jevy (povodně, sucho) a jejich dopady na společnost."],
+ ["st","ss","14:00","14:25","key","Technologie, novinky, aktuality","Arkadiusz Szadkowski – Esri","Arkadiusz Szadkowski; Esri (globální manažer pro Reality Mapping)","Letecké a dronové snímkování, mobilní mapování, LiDAR, 3D a digitální dvojčata. Anglicky, bez tlumočení."],
+ ["st","ss","14:25","16:30","key","Technologie, novinky, aktuality","Novinky v ArcGIS","Odborníci ARCDATA PRAHA a hosté",""],
+ ["st","ss","17:00","17:20","talk","Veřejná správa","Nový územní plán Prahy – využití GIS a AI","Filip Foglar; Hlavní město Praha, odbor územního rozvoje",""],
+ ["st","ss","17:20","17:40","talk","Veřejná správa","Portál územního plánování obcí Kraje Vysočina","Martin Tejkal, Petr Jirásek; Kraj Vysočina",""],
+ ["st","ss","17:40","18:00","talk","Veřejná správa","Digitální transformace plánování: co potřebuje velké město","Jaroslav Holler; Útvar koncepce a rozvoje města Plzně",""],
+ ["st","ss","18:00","18:20","talk","Veřejná správa","Jednotná platforma GIS v Dopravním podniku hl. m. Prahy: zakázkové řešení nad ArcGIS Enterprise","Martin Kamenský, Tomáš Opravil, Pavel Zobal, Adam Brassány, Petr Zatloukal; Dopravní podnik hl. m. Prahy",""],
+ ["st","ss","18:20","18:40","talk","Veřejná správa","Využití Esri technologie v rámci IS DTM ŘSD","Martina Poláková; Ředitelství silnic a dálnic s. p. · Hana Karešová; VARS BRNO a.s.",""],
+
+ ["st","js","17:00","17:20","talk","Správa infrastruktury","GIS v Pražské plynárenské: od modernizace technologií k nové roli v podnikové architektuře","Alena Vydláková, Libor Hladiš, Michal Huml; Pražská plynárenská, a.s.",""],
+ ["st","js","17:20","17:40","talk","Správa infrastruktury","Vodárenská síť jako živý systém","Michal Hamouz; Unicorn Systems HSI · Jakub Zmítko; Vodovody a kanalizace Pardubice",""],
+ ["st","js","17:40","18:00","talk","Správa infrastruktury","DataCollector – Od sběru dat po dokumentaci stavby","Michael Nerad, Lukáš Řeháček, Jan Bartoš; CETIN a.s.",""],
+ ["st","js","18:00","18:20","talk","Správa infrastruktury","Řešení monitoringu suchovodů a nadzemních hydrantů na platformě ArcGIS v ORLENU","Petr Rozsypal; ORLEN Unipetrol RPA · Jan Langr; Unicorn Systems HSI",""],
+
+ ["st","t2a","17:00","17:45","ws","Workshopy","ArcGIS StoryMaps: Víc než jen příběh","Lucie Patková; ARCDATA PRAHA, s.r.o.",""],
+ ["st","t2a","17:45","18:30","ws","Workshopy","From Reality Mapping to Digital Twins","Arkadiusz Szadkowski; Esri","Anglicky, bez tlumočení."],
+
+ ["st","foy","13:15","13:30","mini","Minisemináře","GIS Art","Marie Mašková","Kreativnější stránka GIS: podoby GIS Art, kde hledat inspiraci a jak o takové tvorbě přemýšlet. Spíš přehled nápadů a nástrojů než návod krok za krokem."],
+ ["st","foy","13:45","14:00","mini","Minisemináře","ArcGIS Data Pipelines – ETL pro webový GIS","Matej Vrtich","Načítání, čištění, transformace a kombinování dat ve webovém GIS bez skriptování. Ukázka ETL workflow od vstupu po výslednou vrstvu a automatickou aktualizaci."],
+ ["st","foy","16:45","17:00","mini","Minisemináře","Survey123 pod lupou: tipy, triky a novinky","Kristýna Štěpánová","Průřez novinkami v Survey123 a tipy pro tvorbu formulářů a práci s nimi."],
+ ["st","foy","17:15","17:30","mini","Minisemináře","ArcGIS Instant Apps","Matěj Hrabal","Převod 2D a 3D dat do webových aplikací bez programování pomocí šablon (Mapové výřezy, 3D Prohlížeč, Portfolio…)."],
+ ["st","foy","17:45","18:00","mini","Minisemináře","ArcGIS Online: správa obsahu","Jakub Fér","Organizace vrstev, přístupová práva přes skupiny, metadata a ochrana dat proti smazání."],
+ ["st","foy","19:30","20:00","poster","Přehlídka posterů","Setkání s autory u posterů","Autoři 18 soutěžních posterů","V zadní části foyer. Mezi postery i č. 9 „BIMem to nekončí“ (Rostislav Hořava, MU – Správa Univerzitního kampusu Bohunice). Hlasování o Ceně publika v konferenční aplikaci do čtvrtka 11.30."],
+
+ ["st","kon","13:00","14:00","cons","Stánek konzultačních služeb","Svět webových aplikací a vývoje","Tereza Tylerová, Jan Šarata, Jakub Šilhavý",""],
+ ["st","kon","14:00","15:00","cons","Stánek konzultačních služeb","Možnosti služeb ARCDATA, školení, projektové řízení","Vladimír Hudec, Adam Vazač, Jan Borovanský, David Černický",""],
+ ["st","kon","15:00","16:00","cons","Stánek konzultačních služeb","Správa dat, geodatabáze, ArcGIS Utility Network","Marek Ošlejšek, Václav Žák, Martin Král",""],
+ ["st","kon","16:00","17:00","cons","Stánek konzultačních služeb","Svět desktopových aplikací a vývoje","Marcel Šíp, Marek Hofmann, Dominik Mazur",""],
+ ["st","kon","17:00","18:00","cons","Stánek konzultačních služeb","Svět mobilních aplikací a vývoje","Vladimír Holubec, Zdeněk Jankovský",""],
+
+ // ===== ČTVRTEK =====
+ ["ct","ss","9:30","9:50","talk","Veřejná správa","Památky v mapách: Jak NPÚ zpřístupňuje kulturní dědictví pomocí GIS","Karel Sklenář; Národní památkový ústav · Martin Porteš; VARS BRNO",""],
+ ["ct","ss","9:50","10:10","talk","Veřejná správa","Jedna platforma, mnoho agend: GIS řešení pro město Plzeň v ArcGIS Enterprise","Jiří Beránek; GEOREAL · Stanislav Štangl; Správa informačních technologií města Plzně",""],
+ ["ct","ss","10:10","10:30","talk","Veřejná správa","Skryté mapy úřadu: Data, která pomáhají řídit kraj","Jan Harbula; Olomoucký kraj",""],
+ ["ct","ss","10:30","10:50","talk","Veřejná správa","Drony usnadňují práci!?!","Marek Drozdek; Statutární město Opava",""],
+ ["ct","ss","11:20","12:40","ws","Workshop","Správa rastrových dat v prostředí ArcGIS aneb „Co s těmi rastry?“","Inka Tesařová, Matej Vrtich; ARCDATA PRAHA, s.r.o.",""],
+ ["ct","ss","13:20","14:45","ws","Workshop","Tipy a triky v ArcGIS 2026","Marie Mašková, Václav Žák; ARCDATA PRAHA, s.r.o.",""],
+ ["ct","ss","14:45","15:10","key","Závěr konference","Závěr konference","ARCDATA PRAHA","Co jsme od vás na konferenci slyšeli · vyhlášení soutěže posterů · vyhlášení Ceny publika pro postery a aplikace."],
+
+ ["ct","js","9:30","9:50","talk","Správa infrastruktury","Automatizace nasazování a konfigurace ArcGIS","Antonín Procházka, Martin Hofrajtr; CETIN a.s.",""],
+ ["ct","js","9:50","10:10","talk","Správa infrastruktury","Využití GIS pro koordinaci investičních záměrů ČEPS v územním plánování","Vojtěch Mazura, Josef Chrást; ČEPS, a.s.",""],
+ ["ct","js","10:10","10:30","talk","Správa infrastruktury","CS RequestPortal a ArcGIS – vyjadřovací činnost jednoduše, rychle a intuitivně","Tomáš Kroupa, Lubomír Lazar; Controlis Solutions",""],
+ ["ct","js","10:30","10:50","talk","Správa infrastruktury","Našeptávač místních názvů pomocí ArcGIS lokátorů","David Ondřich, Jana Černá; CENDIS, s.p.",""],
+ ["ct","js","11:20","11:40","talk","Uživatelské přednášky","Skenování ze vzduchu i země… a co s daty?","Jakub Vynikal; 3GON Positioning",""],
+ ["ct","js","11:40","12:00","talk","Uživatelské přednášky","Zeměměřický úřad: Aktuální stav tvorby výškopisu ZABAGED","Jindřich Horák; Zeměměřický úřad",""],
+ ["ct","js","12:00","12:20","talk","Uživatelské přednášky","Koncepce zeleně města Ostravy","Josef Tračík; Městský ateliér prostorového plánování a architektury (MAPPA)",""],
+ ["ct","js","12:20","12:40","talk","Uživatelské přednášky","GIS a Science On a Sphere ve vzdělávací praxi","Tomáš Vencl, Oldřich Koubek; Vzdělávací centrum SFÉRA Pardubice",""],
+ ["ct","js","13:20","14:05","ws","Workshopy","Prvky umělé inteligence v ArcGIS","Vladimír Holubec, Matej Vrtich; ARCDATA PRAHA, s.r.o.",""],
+ ["ct","js","14:05","14:45","ws","Workshopy","Řízení úkolů v ArcGIS Field Maps","Radek Kuttelwascher; ARCDATA PRAHA, s.r.o.",""],
+
+ ["ct","t2a","9:30","9:50","talk","Životní prostředí","GIS modelování větrné eroze v ČR: od půdních dat k rozhodovací podpoře ochrany krajiny","Josef Kučera, Petr Karásek; VÚMOP · Martin Blecha; Státní pozemkový úřad",""],
+ ["ct","t2a","9:50","10:10","talk","Životní prostředí","ČGS v Etiopii: od geologického mapování k moderní geovědní infrastruktuře","Kryštof Verner; ČGS, PřF UK · Petra Hejtmánková, Otmar Petyniak; ČGS · Karel Martínek; PřF UK",""],
+ ["ct","t2a","10:10","10:30","talk","Životní prostředí","Vymezení urbanizovaných území v GIS a hodnocení jejich ohroženosti pluviálními povodněmi","Petr Kavka, Jan Devátý; ČVUT FSv · Luděk Strouhal; ČVUT FSv, VÚV TGM",""],
+ ["ct","t2a","10:30","10:50","talk","Životní prostředí","Jak prezentovat data o životním prostředí ve veřejné správě","Radim Ilčík; JINAG · Nikola Koktavá; JINAG, VŠB-TUO",""],
+ ["ct","t2a","11:20","11:40","talk","Uživatelské přednášky","IX. generace mapování brněnského maloobchodu","Jan Ambrož; Kancelář architekta města Brna",""],
+ ["ct","t2a","11:40","12:00","talk","Uživatelské přednášky","Multikriteriální GIS analýza rozvojového potenciálu Brněnské metropolitní oblasti","Jaroslav Burian, Stanislav Šťastný; Urban Planner · Matouš Čanda, Zdeněk Dvořák, Petr Šašinka; Magistrát města Brna",""],
+ ["ct","t2a","12:00","12:20","talk","Uživatelské přednášky","Obohacení městského 3D modelu pomocí deep learningu","Barbora Plačková; Statutární město Brno",""],
+ ["ct","t2a","12:20","12:40","talk","Uživatelské přednášky","Zapojenie AI do generovania územno-plánovacích informácií","Filip Polonský, Ľubomír Macák; IPP Bratislava · Martin Baloga; EnviArch",""],
+
+ ["ct","foy","11:00","11:15","mini","Minisemináře","DTM Connect","Lucie Patková, Dominik Mazur","Připravovaná aktualizace DTM Connect a podpora nového formátu JVF DTM 1.5."],
+ ["ct","foy","11:30","11:45","mini","Minisemináře","ArcGIS Earth","Vladimír Holubec","Bezplatná 3D aplikace, hlavně mobilní verze: data v terénu ve 3D a v experimentálním režimu rozšířené reality."],
+ ["ct","foy","12:00","12:15","mini","Minisemináře","GeoParquet v ArcGIS","David Novák","Cloud-native GeoParquet v ArcGIS Pro: přímé načítání velkých dat bez konverze, Multifile Feature Connection, převod mezi geodatabází a GeoParquetem."],
+ ["ct","foy","12:45","13:00","mini","Minisemináře","ArcGIS Living Atlas","Lucie Patková","Novinky v Living Atlas, využití napříč aplikacemi Esri a jak do něj nominovat vlastní data."],
+ ["ct","foy","13:05","13:20","mini","Minisemináře","Smart mapping","Tereza Černohousová","Styly vizualizace v Map Vieweru: kde je najít, jak je přizpůsobit a jak barvami zlepšit čitelnost mapy."],
+
+ ["ct","kon","9:30","10:30","cons","Stánek konzultačních služeb","Inovační technologie (AI v ArcGIS, cloud, Kubernetes apod.)","Matej Vrtich, Jakub Šilhavý, Vladimír Holubec",""],
+ ["ct","kon","11:00","12:00","cons","Stánek konzultačních služeb","ArcGIS Enterprise a jeho rozšiřování, zabezpečení a optimalizace","Zdeněk Jankovský, David Novák, Jan Šarata",""],
+ ["ct","kon","12:00","13:00","cons","Stánek konzultačních služeb","Svět webových aplikací a vývoje","Jan Šarata, Marek Hofmann, Marcel Šíp",""],
+ ["ct","kon","13:00","14:00","cons","Stánek konzultačních služeb","Skriptování (Python API, Notebooks, Arcade)","Zdeněk Jankovský, Vladimír Zenkl, David Černický",""],
+ ["ct","kon","14:00","15:00","cons","Stánek konzultačních služeb","Rastrová data, 3D","Lucie Patková, Jakub Šilhavý, Tereza Černohousová, Inka Tesařová",""]
+];
+
+// ---------- helpers ----------
+const m = s => { const [h,mm]=s.split(":").map(Number); return h*60+mm; };
+const fmt = n => `${Math.floor(n/60)}:${String(n%60).padStart(2,"0")}`;
+const esc = s => String(s).replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const ITEMS = RAW.map(r=>({id:`${r[0]}-${r[1]}-${r[2].replace(":","")}`,day:r[0],room:r[1],s:m(r[2]),e:m(r[3]),kind:r[4],block:r[5],title:r[6],people:r[7],desc:r[8]}));
+const BY_ID = Object.fromEntries(ITEMS.map(i=>[i.id,i]));
+const PX = 4.2; // px per minute
+
+// ---------- state ----------
+const store = {
+  get(k,d){ try{ const v=localStorage.getItem(k); return v?JSON.parse(v):d; }catch(e){ return d; } },
+  set(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} }
+};
+const state = {
+  sel: new Set(store.get("esri26.sel",[]).filter(id=>BY_ID[id])),
+  day: "st", view: "grid",
+  cols: store.get("esri26.cols",{foy:true,kon:true})
+};
+function save(){ store.set("esri26.sel",[...state.sel]); store.set("esri26.cols",state.cols); }
+const overlap = (a,b) => a.day===b.day && a.s<b.e && b.s<a.e;
+function clashesOf(item){ return [...state.sel].map(id=>BY_ID[id]).filter(o=>o.id!==item.id && overlap(o,item)); }
+function clashCount(){ let n=0; const sel=[...state.sel].map(id=>BY_ID[id]); for(let i=0;i<sel.length;i++) for(let j=i+1;j<sel.length;j++) if(overlap(sel[i],sel[j])) n++; return n; }
+
+// today / now (Prague)
+function nowPrague(){
+  try{
+    const p = new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Prague",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).formatToParts(new Date());
+    const g = t=>p.find(x=>x.type===t).value;
+    return {date:`${g("year")}-${g("month")}-${g("day")}`, min:+g("hour")*60+ +g("minute")};
+  }catch(e){ const d=new Date(); return {date:"",min:d.getHours()*60+d.getMinutes()}; }
+}
+const todayKey = (()=>{ const n=nowPrague(); return Object.keys(DAYS).find(k=>DAYS[k].date===n.date); })();
+if(todayKey) state.day = todayKey;
+
+// ---------- render ----------
+const $ = s=>document.querySelector(s);
+const scroller = $("#scroller");
+
+function renderStats(){
+  const n = state.sel.size, c = clashCount();
+  $("#stats").innerHTML = n ? `<b>${n}</b> vybráno${c?` · <span class="bad">${c}× kolize</span>`:" · bez kolizí"}` : "Ťukni na přednášku";
+}
+function renderChips(){
+  const chips = Object.entries(KINDS).map(([k,v])=>`<span class="chip" style="cursor:default"><span class="dot" style="background:${v.c}"></span>${v.label.replace(" (15 min)","")}</span>`);
+  const toggles = [["foy","Minisemináře"],["kon","Konzultace"]].map(([k,l])=>`<button class="chip" data-col="${k}" aria-pressed="${!!state.cols[k]}"><span class="dot" style="background:var(--ink)"></span>Sloupec ${l}</button>`);
+  $("#chips").innerHTML = state.view==="grid" ? toggles.join("") + chips.join("") : chips.join("");
+}
+
+function renderGrid(){
+  const D = DAYS[state.day], from=m(D.from), to=m(D.to), H=(to-from)*PX;
+  const cols = ["ss","js","t2a","foy","kon"].filter(c=>HALLS.includes(c)||state.cols[c]);
+  const g = document.createElement("div");
+  g.className="grid";
+  g.style.gridTemplateColumns = `42px repeat(${cols.length}, minmax(112px,1fr))`;
+  g.style.gridTemplateRows = `34px ${H+12}px`;
+  let html = `<div class="corner"></div>` + cols.map(c=>`<div class="colhead">${ROOMS[c].short}</div>`).join("");
+  // time column
+  let tl = `<div class="times" style="height:${H+12}px;grid-column:1;grid-row:2">`;
+  for(let t=Math.ceil(from/30)*30; t<=to; t+=30) tl += `<div class="tlabel mono ${t%60?"half":""}" style="top:${(t-from)*PX+6}px">${fmt(t)}</div>`;
+  tl += `</div>`;
+  html += tl;
+  const nowInfo = nowPrague();
+  const sel = state.sel;
+  cols.forEach((c,ci)=>{
+    let col = `<div class="col" data-col="${c}" style="height:${H+12}px;grid-column:${ci+2};grid-row:2">`;
+    for(let t=Math.ceil(from/30)*30; t<=to; t+=30) col += `<div class="hline ${t%60?"":"full"}" style="top:${(t-from)*PX+6}px"></div>`;
+    for(const it of ITEMS.filter(i=>i.day===state.day && i.room===c)){
+      const h=(it.e-it.s)*PX-3, top=(it.s-from)*PX+7;
+      const isSel = sel.has(it.id), cl = isSel && clashesOf(it).length>0;
+      const blocked = !isSel && [...sel].some(id=>overlap(BY_ID[id],it));
+      const firstP = it.people.split("·")[0].split(";")[0].split(",")[0].trim();
+      const titleLines = Math.max(1, Math.floor((h-18)/14));
+      const showP = h>100 && !it.title.includes(firstP);
+      const tLines = showP ? Math.max(1, Math.min(titleLines, Math.floor((h-18-15)/14))) : titleLines;
+      const pLines = showP ? Math.max(1, Math.floor((h-18-tLines*14-2)/13)) : 0;
+      col += `<div class="card ${isSel?"sel":""} ${cl?"clash":""} ${blocked?"blocked":""}" role="button" tabindex="0" aria-pressed="${isSel}" data-id="${it.id}" style="--k:${KINDS[it.kind].c};top:${top}px;height:${h}px">
+        <span class="t mono">${fmt(it.s)}–${fmt(it.e)}</span>
+        <span class="n" style="-webkit-line-clamp:${tLines}">${esc(it.title)}</span>
+        ${showP?`<span class="p" style="-webkit-line-clamp:${pLines}">${esc(it.people.split("·")[0].split(";")[0])}</span>`:""}
+        <button class="info" data-info="${it.id}" aria-label="Detail"><span>i</span></button>
+      </div>`;
+    }
+    col += `</div>`;
+    html += col;
+  });
+  // breaks span the three halls
+  html += `<div style="grid-column:2 / 5;grid-row:2;position:relative;pointer-events:none;z-index:1">` +
+    BANDS.filter(b=>b[0]===state.day).map(b=>{ const s=m(b[1]), e=Math.min(m(b[2]),to);
+      return `<div class="band" style="top:${(s-from)*PX+6}px;height:${(e-s)*PX}px;left:0;right:0"><div>${esc(b[3])}${b[4]?`<small>${esc(b[4])}</small>`:""}</div></div>`; }).join("") + `</div>`;
+  g.innerHTML = html;
+  // now line
+  if(nowInfo.date===D.date && nowInfo.min>=from && nowInfo.min<=to){
+    const nl=document.createElement("div");
+    nl.className="nowline"; nl.dataset.t=fmt(nowInfo.min);
+    nl.style.top = `${34+(nowInfo.min-from)*PX+6}px`;
+    nl.style.gridColumn="1 / -1"; nl.style.gridRow="1 / -1";
+    g.appendChild(nl);
+  }
+  scroller.innerHTML=""; scroller.appendChild(g);
+}
+
+function renderPlan(){
+  const sel=[...state.sel].map(id=>BY_ID[id]).sort((a,b)=>(a.day>b.day?1:a.day<b.day?-1:0)||(a.day==="st"?0:0)||a.s-b.s);
+  const order={st:0,ct:1};
+  sel.sort((a,b)=>order[a.day]-order[b.day]||a.s-b.s||a.e-b.e);
+  let html=`<div class="plan">`;
+  if(!sel.length){
+    html+=`<div class="empty">Zatím nic vybraného.<br>V mřížce ťukni na přednášky, na které chceš jít. Co se kryje, zčervená; co se kryje s tvým výběrem, zešedne.</div>`;
+  }else{
+    for(const d of ["st","ct"]){
+      const list=sel.filter(i=>i.day===d); if(!list.length) continue;
+      html+=`<h2>${DAYS[d].label}</h2>`;
+      let prevEnd=null;
+      for(const it of list){
+        if(prevEnd!==null && it.s-prevEnd>=20) html+=`<div class="gap mono">volno ${fmt(prevEnd)}–${fmt(it.s)}</div>`;
+        const cx=clashesOf(it);
+        html+=`<button class="pitem ${cx.length?"clash":""}" data-info="${it.id}" style="--k:${KINDS[it.kind].c}">
+          <div class="tm mono">${fmt(it.s)}–${fmt(it.e)}<div class="rm">${ROOMS[it.room].name}</div></div>
+          <div><div class="nm">${esc(it.title)}</div><div class="pp">${esc(it.people)}</div>
+          ${cx.length?`<div class="cx">⚠ Kryje se s: ${cx.map(o=>esc(o.title)).join(" · ")}</div>`:""}</div>
+        </button>`;
+        prevEnd=Math.max(prevEnd??0,it.e);
+      }
+    }
+    html+=`<div class="planbar"><button class="btn danger" id="clearAll">Smazat výběr</button><button class="btn primary" id="copyPlan">Kopírovat plán</button></div>`;
+  }
+  html+=`</div>`;
+  scroller.innerHTML=html;
+}
+
+function render(keepScroll){
+  const st = scroller.scrollTop, sl = scroller.scrollLeft;
+  document.querySelectorAll("[data-day]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.day===state.day));
+  document.querySelectorAll("[data-view]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.view===state.view));
+  renderStats(); renderChips();
+  state.view==="grid" ? renderGrid() : renderPlan();
+  if(keepScroll){ scroller.scrollTop=st; scroller.scrollLeft=sl; }
+}
+
+// ---------- sheet ----------
+const sheet=$("#sheet"), scrim=$("#scrim");
+let sheetId=null;
+function openSheet(id){
+  sheetId=id; const it=BY_ID[id], isSel=state.sel.has(id);
+  const cx = clashesOf(it);
+  const others = isSel ? [] : [...state.sel].map(x=>BY_ID[x]).filter(o=>overlap(o,it));
+  sheet.innerHTML=`<div class="grab"></div>
+    <div class="kind" style="--k:${KINDS[it.kind].c}"><i></i>${KINDS[it.kind].label} · ${esc(it.block)}</div>
+    <h3>${esc(it.title)}</h3>
+    <div class="meta mono">${DAYS[it.day].label.split(" ")[0]} ${fmt(it.s)}–${fmt(it.e)} · <span style="font-family:'IBM Plex Sans'">${ROOMS[it.room].where}</span></div>
+    <div class="people">${esc(it.people).replace(/ · /g,"<br>")}</div>
+    ${it.desc?`<div class="desc">${esc(it.desc)}</div>`:""}
+    ${(isSel?cx:others).length?`<div class="warn">⚠ ${isSel?"Kryje se s":"Kryje se s tvým výběrem"}: ${(isSel?cx:others).map(o=>`${fmt(o.s)} ${esc(o.title)} (${ROOMS[o.room].name})`).join("; ")}</div>`:""}
+    <div class="actions">
+      <button class="btn" id="sClose">Zavřít</button>
+      <button class="btn ${isSel?"danger":"primary"}" id="sToggle">${isSel?"Odebrat z plánu":"Přidat do plánu"}</button>
+    </div>`;
+  sheet.classList.add("on"); scrim.classList.add("on");
+}
+function closeSheet(){ sheet.classList.remove("on"); scrim.classList.remove("on"); sheetId=null; }
+scrim.addEventListener("click",closeSheet);
+sheet.addEventListener("click",e=>{
+  if(e.target.closest("#sClose")) closeSheet();
+  if(e.target.closest("#sToggle")){ toggle(sheetId); closeSheet(); }
+});
+
+function toggle(id){
+  state.sel.has(id)?state.sel.delete(id):state.sel.add(id);
+  save(); render(true);
+}
+function toast(t){ const el=$("#toast"); el.textContent=t; el.classList.add("on"); clearTimeout(toast._t); toast._t=setTimeout(()=>el.classList.remove("on"),1800); }
+
+// ---------- events ----------
+document.addEventListener("click",e=>{
+  const dayB=e.target.closest("[data-day]"); if(dayB){ state.day=dayB.dataset.day; render(); scrollToNow(); return; }
+  const viewB=e.target.closest("[data-view]"); if(viewB){ state.view=viewB.dataset.view; render(); if(state.view==="grid") scrollToNow(); return; }
+  const colB=e.target.closest("[data-col]"); if(colB && colB.tagName==="BUTTON"){ state.cols[colB.dataset.col]=!state.cols[colB.dataset.col]; save(); render(true); return; }
+  const info=e.target.closest("[data-info]"); if(info){ e.stopPropagation(); openSheet(info.dataset.info); return; }
+  const card=e.target.closest(".card"); if(card){ toggle(card.dataset.id); return; }
+  if(e.target.closest("#clearAll")){ if(clearAll._armed){ state.sel.clear(); save(); render(); clearAll._armed=false; } else { clearAll._armed=true; e.target.textContent="Opravdu smazat?"; setTimeout(()=>{clearAll._armed=false; const b=$("#clearAll"); if(b) b.textContent="Smazat výběr";},2500);} return; }
+  if(e.target.closest("#copyPlan")){ copyPlan(); return; }
+});
+function clearAll(){}
+document.addEventListener("keydown",e=>{
+  if(e.key==="Escape") closeSheet();
+  const card=e.target.closest&&e.target.closest(".card");
+  if(card && (e.key==="Enter"||e.key===" ")){ e.preventDefault(); toggle(card.dataset.id); }
+});
+async function copyPlan(){
+  const order={st:0,ct:1};
+  const sel=[...state.sel].map(id=>BY_ID[id]).sort((a,b)=>order[a.day]-order[b.day]||a.s-b.s);
+  let txt="Můj plán – Konference GIS Esri v ČR 2026\n";
+  for(const d of ["st","ct"]){ const l=sel.filter(i=>i.day===d); if(!l.length) continue;
+    txt+=`\n${DAYS[d].label}\n`+l.map(i=>`${fmt(i.s)}–${fmt(i.e)}  ${ROOMS[i.room].name}  ${i.title}${clashesOf(i).length?"  [KOLIZE]":""}`).join("\n")+"\n"; }
+  try{ await navigator.clipboard.writeText(txt); toast("Plán zkopírován"); }catch(e){ toast("Kopírování se nepodařilo"); }
+}
+function scrollToNow(){
+  if(state.view!=="grid") return;
+  const n=nowPrague(), D=DAYS[state.day];
+  if(n.date===D.date){ const y=(n.min-m(D.from))*PX-80; scroller.scrollTop=Math.max(0,y); } else scroller.scrollTop=0;
+}
+render(); scrollToNow();
+// refresh now-line every minute
+setInterval(()=>{ if(state.view==="grid" && todayKey) render(true); },60000);
+</script>
+</body>
+</html>
